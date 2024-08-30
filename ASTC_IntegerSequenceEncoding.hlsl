@@ -1,4 +1,32 @@
  /**
+ * form [ARM:astc-encoder]
+ * Define normalized (starting at zero) numeric ranges that can be represented
+ * with 8 bits or less.
+ */
+#define	QUANT_2 0
+#define	QUANT_3 1
+#define	QUANT_4 2
+#define	QUANT_5 3
+#define	QUANT_6 4
+#define	QUANT_8 5
+#define	QUANT_10 6
+#define	QUANT_12 7
+#define	QUANT_16 8
+#define	QUANT_20 9
+#define	QUANT_24 10
+#define	QUANT_32 11
+#define	QUANT_40 12
+#define	QUANT_48 13
+#define	QUANT_64 14
+#define	QUANT_80 15
+#define	QUANT_96 16
+#define	QUANT_128 17
+#define	QUANT_160 18
+#define	QUANT_192 19
+#define	QUANT_256 20
+#define	QUANT_MAX 21
+
+ /**
   * Table that describes the number of trits or quints along with bits required
   * for storing each range.
   */

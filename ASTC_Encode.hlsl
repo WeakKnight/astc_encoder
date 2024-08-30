@@ -6,10 +6,6 @@
 #define THREAD_NUM_Y 8
 #endif
 
-#ifndef BLOCK_6X6
-#define BLOCK_6X6 0
-#endif
-
 #ifndef HAS_ALPHA
 #define HAS_ALPHA 0
 #endif
@@ -18,11 +14,7 @@
 #define IS_NORMALMAP 0
 #endif
 
-#if BLOCK_6X6
-#define DIM 6
-#else
 #define DIM 4
-#endif
 
 #define BLOCK_SIZE ((DIM) * (DIM))
 
@@ -38,34 +30,6 @@
 */
 #define CEM_LDR_RGB_DIRECT 8
 #define CEM_LDR_RGBA_DIRECT 12
-
-/**
- * form [ARM:astc-encoder]
- * Define normalized (starting at zero) numeric ranges that can be represented
- * with 8 bits or less.
- */
-#define	QUANT_2 0
-#define	QUANT_3 1
-#define	QUANT_4 2
-#define	QUANT_5 3
-#define	QUANT_6 4
-#define	QUANT_8 5
-#define	QUANT_10 6
-#define	QUANT_12 7
-#define	QUANT_16 8
-#define	QUANT_20 9
-#define	QUANT_24 10
-#define	QUANT_32 11
-#define	QUANT_40 12
-#define	QUANT_48 13
-#define	QUANT_64 14
-#define	QUANT_80 15
-#define	QUANT_96 16
-#define	QUANT_128 17
-#define	QUANT_160 18
-#define	QUANT_192 19
-#define	QUANT_256 20
-#define	QUANT_MAX 21
 
 #include "ASTC_Table.hlsl"
 #include "ASTC_IntegerSequenceEncoding.hlsl"
@@ -88,21 +52,6 @@ void swap(inout float4 lhs, inout float4 rhs)
 	float4 tmp = lhs;
 	lhs = rhs;
 	rhs = tmp;
-}
-
-float4 eigen_vector(float4x4 m)
-{
-	// calc the max eigen value by iteration
-	float4 v = float4(0.26726f, 0.80178f, 0.53452f, 0.0f);
-	for (int i = 0; i < 8; ++i)
-	{
-		v = mul(m, v);
-		if (length(v) < SMALL_VALUE) {
-			return v;
-		}
-		v = normalize(mul(m, v));
-	}
-	return v;
 }
 
 void find_min_max(float4 texels[BLOCK_SIZE], float4 pt_mean, float4 vec_k, out float4 e0, out float4 e1)
@@ -133,37 +82,6 @@ void find_min_max(float4 texels[BLOCK_SIZE], float4 pt_mean, float4 vec_k, out f
 	e0.a = 255.0f;
 	e1.a = 255.0f;
 #endif
-
-}
-
-void principal_component_analysis(float4 texels[BLOCK_SIZE], out float4 e0, out float4 e1)
-{
-	int i = 0;
-	float4 pt_mean = 0;
-	for (i = 0; i < BLOCK_SIZE; ++i)
-	{
-		pt_mean += texels[i];
-	}
-	pt_mean /= BLOCK_SIZE;
-
-	float4x4 cov = 0;
-	float s = 0;
-	for (int k = 0; k < BLOCK_SIZE; ++k)
-	{
-		float4 texel = texels[k] - pt_mean;
-		for (i = 0; i < 4; ++i)
-		{
-			for (int j = 0; j < 4; ++j)
-			{
-				cov[i][j] += texel[i] * texel[j];
-			}
-		}
-	}
-	cov /= BLOCK_SIZE - 1;
-
-	float4 vec_k = eigen_vector(cov);
-
-	find_min_max(texels, pt_mean, vec_k, e0, e1);
 
 }
 
@@ -332,24 +250,7 @@ void calculate_normal_weights(float4 texels[BLOCK_SIZE],
 		vec_k = normalize(vec_k);
 		float minw = 1e31f;
 		float maxw = -1e31f;
-#if BLOCK_6X6
 
-/* bilinear interpolation: GirdSize is 4，BlockSize is 6
-
-	0     1     2     3     4     5
-|-----|-----|-----|-----|-----|-----|
-|--------|--------|--------|--------|
-    0        1        2        3
-*/
-		for (i = 0; i < X_GRIDS * Y_GRIDS; ++i)
-		{
-			float4 sum = sample_texel(texels, idx_grids[i], wt_grids[i]);
-			float w = dot(vec_k, sum - ep0);
-			minw = min(w, minw);
-			maxw = max(w, maxw);
-			projw[i] = w;
-		}
-#else
 		// ensure "X_GRIDS * Y_GRIDS == BLOCK_SIZE"
 		for (i = 0; i < BLOCK_SIZE; ++i)
 		{
@@ -359,7 +260,6 @@ void calculate_normal_weights(float4 texels[BLOCK_SIZE],
 			maxw = max(w, maxw);
 			projw[i] = w;
 		}
-#endif
 
 		float invlen = maxw - minw;
 		invlen = max(SMALL_VALUE, invlen);
@@ -510,8 +410,7 @@ uint4 weight_ise(float4 texels[BLOCK_SIZE], uint weight_range, float4 ep0, float
 uint4 encode_block(float4 texels[BLOCK_SIZE])
 {
 	float4 ep0, ep1;
-	principal_component_analysis(texels, ep0, ep1);
-	//max_accumulation_pixel_direction(texels, ep0, ep1);
+	max_accumulation_pixel_direction(texels, ep0, ep1);
 
 	// endpoints_quant是根据整个128bits减去weights的编码占用和其他配置占用后剩余的bits位数来确定的。
 	// for fast compression!

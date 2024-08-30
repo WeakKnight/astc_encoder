@@ -56,7 +56,6 @@ HRESULT compile_shader(_In_ LPCWSTR srcFile, _In_ LPCSTR entryPoint, LPCSTR targ
 		"THREAD_NUM_X", cTHREAD_NUM_X.c_str(),
 		"THREAD_NUM_Y", cTHREAD_NUM_Y.c_str(),
 		"IS_NORMALMAP", option.is_normal_map ? "1" : "0",
-		"BLOCK_6X6", option.is4x4 ? "0" : "1",
 		"HAS_ALPHA", option.has_alpha ? "1" : "0",
 		NULL, NULL
 	};
